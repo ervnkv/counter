@@ -12,7 +12,10 @@
     LettersStore.add(currentValue) // Вызываем кастомную функцию добавление нового символа из стора
     currentValue = null // Обнуляем переменную для красоты
   }
-
+  
+  $: console.log("stream 1 ", $LettersStore.list)
+  $: console.log("stream 2 ", $LettersStore.listSorted)
+  $: console.log("stream 3 ", $LettersStore.length)
 </script>
 
 
