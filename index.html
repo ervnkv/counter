@@ -1,13 +1,186 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + Svelte</title>
+    <title>Буквы по алфавиту</title>
+    <script src="https://unpkg.com/@reduxjs/toolkit@latest/dist/redux-toolkit.umd.js"></script>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/index.js"></script>
+    <main>
+        <span>
+            <h1>Введенные символы: </h1>
+            <h1 id="stream1"></h1>
+        </span>
+        <span>
+            <h1>Буквы по алфавиту: </h1>
+            <h1 id="stream2"></h1>
+        </span>
+        <span>
+            <h1>Количество: </h1>
+            <h1 id="stream3"></h1>
+        </span>
+        <span>
+            <input id="input" maxlength="1"/>
+            <button id="addButton" disabled>OK</button>
+        </span>
+    </main>
+    <script>
+        const RTK = window.RTK
+        // Создание слайса counter (слайсов может быть несколько)
+        const counterSlice = RTK.createSlice({
+            name: "counter",
+            initialState: {         // Первоначальное состояние слайса
+                stream1: [],        // 1. Полный список символов
+                stream2: [],        // 2. Отсортированный и отфильтрованный список символов (только буквы)
+                stream3: 0,         // 3. Длина отфильтрованного списка
+            },
+            reducers: {
+                // Функция, действие в этом слайсе
+                addLetter(state, action) { 
+                    const char = action.payload // (action.payload - то, что передаем как аргумент)
+                    
+                    const {stream1, stream2, stream3} = state // Достаем из стейта текущие переменные (фигурные скобки - деструктуризация объекта)
+                    
+                    // 1. Обновляем Полный список символов
+                    state.stream1 = [...stream1, char] // Создаем копию массива и добавляем в конец символ (... - spread оператор)
+                    
+                    // 2. Обновляем Отсортированный и отфильтрованный список символов
+                    let newStream2 = stream2
+                    const isString = typeof char === "string" // Проверка что символ - строка
+                    const isLetter = char.toUpperCase() !== char.toLowerCase() // Проверка что символ - буква
+                    if (isString && isLetter) {  // Этим условием отбрасываем числа и спец символы
+                        const charUpper = char.toUpperCase() // Преобразуем символ в верхний регистр
+                        if (!stream2.includes(charUpper)) { // Если массив не содержит этот символ - идем дальше (этим условием мы избегаем повторов)
+                            newStream2 = [...state.stream2, charUpper] // Создаем копию массива и добавляем в конец символ (... - spread оператор)
+                                .sort() // Сортируем по алфавиту
+                            state.stream2 = newStream2 
+                        }
+                    }
+                    
+                    // 3. Обновляем длину отфильтрованного списка
+                    state.stream3 =  newStream2.length
+                }
+            }
+        })
+        const {addLetter} = counterSlice.actions // Вытаскиваем из слайса функции
+        const counterReducer = counterSlice.reducer // Создание Редьюсера из слайса
+        const store = RTK.configureStore({ reducer: { // Создание общего стора и подключение в него редьюсера counter
+            counter: counterReducer  
+        }})
+
+        // Функция обновления на странице значения stream1
+        function renderStream1() {
+            const elementStream1 = document.getElementById("stream1") // Элемент в верстке
+            const valueStream1 = store.getState().counter.stream1.join(", ") // Значение из стора
+            elementStream1.innerHTML = valueStream1 // Обновление
+            console.log("stream1", valueStream1)
+        }
+        // Функция обновления на странице значения stream2
+        function renderStream2() {
+            const elementStream2 = document.getElementById("stream2") // Элемент в верстке
+            const valueStream2 = store.getState().counter.stream2.join(", ") // Значение из стора
+            elementStream2.innerHTML = valueStream2 // Обновление
+            console.log("stream2", valueStream2)
+        }
+        // Функция обновления на странице значения stream3
+        function renderStream3() {
+            const elementStream3 = document.getElementById("stream3") // Элемент в верстке
+            const valueStream3 = store.getState().counter.stream3.toString() // Значение из стора
+            elementStream3.innerHTML = valueStream3 // Обновление
+            console.log("stream3", valueStream3)
+        }
+        // Вызов функции обновления
+        renderStream1() 
+        renderStream2() 
+        renderStream3() 
+
+        // Подписка на переменные из стора и вызов функций при их изменении
+        store.subscribe(renderStream1) 
+        store.subscribe(renderStream2) 
+        store.subscribe(renderStream3) 
+
+ 
+        // Функция вызова addLetter из стора
+        const handleAddLetter = () => {
+            const value = document.getElementById("input").value // Значение из поля ввода
+            const isBlock = value === " " || value === "" || value === null // Проверка можно ли это значение отправлять в стор
+            if (isBlock) return // Если проверка не пройдена - выйти из функции
+            store.dispatch(addLetter(value)) // Вызова addLetter из стора
+            document.getElementById("input").value = null // Обнуление поля ввода
+            document.getElementById("addButton").disabled = true // Блокировка кнопки
+        }
+        // При нажатии на энтер - вызывать handleAddLetter
+        document.addEventListener("keyup", function(event) {
+                if (event.code === 'Enter') {
+                    handleAddLetter()
+                }
+            })
+        // При нажатии на кнопку - вызывать handleAddLetter
+        document.getElementById("addButton")
+            .addEventListener("click", function() {
+                handleAddLetter()
+            })
+        // При вводе сиволов в поле ввода - блокировать или разблокировать кнопку
+        document.getElementById("input")   
+            .addEventListener("input", function() {
+                const value = document.getElementById("input").value
+                const isBlock = value === " " || value === "" || value === null
+                if (isBlock) {
+                    document.getElementById("addButton").disabled = true
+                } else (
+                    document.getElementById("addButton").disabled = false
+                )
+            })
+
+    </script>
+    <style>
+        :root {
+            font-family: Inter, system-ui, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            font-weight: 400;
+
+            color-scheme: dark;
+            color: rgba(255, 255, 255, 0.87);
+            background-color: #242424;
+
+            display: flex;
+            height: 100vh;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            flex: 1;
+        }
+        main {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+
+            width: 40rem;
+        }
+        span {
+            display: flex;
+            gap: 1rem;
+        }
+        h1 {
+            font-size: 1.0rem;
+            text-align: left;
+        }
+        input {
+            display: flex;
+            flex: 1;
+
+            height: 2rem;
+            padding-inline: 0.5rem;
+
+            border: 0;
+            outline: 0;
+        }
+        button {
+            height: 2rem;
+            width: 4rem
+        }
+    </style>
   </body>
 </html>
